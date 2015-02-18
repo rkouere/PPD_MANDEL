@@ -1,0 +1,20 @@
+ $Id: pp.readme,v 1.1 2008/02/26 14:27:53 marquet Exp $ 
+------------------------------------------------------------
+
+------------------------------
+Ping pong
+------------------------------------------------------------
+
+Ce petit programme est utilise pour verifier la bonne mise en place de
+l'environnement d'execution. Il permet aussi de mesurer la bande
+passante entre deux noeuds de la machine. 
+
+Construction de l'executable : 
+  % make pp
+
+Utilisation sur deux noeuds : 
+  % mpirun -np 2 pp
+
+------------------------------
+ eof
+------------------------------------------------------------

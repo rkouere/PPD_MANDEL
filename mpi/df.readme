@@ -1,0 +1,62 @@
+~ $Id: df.readme,v 1.1 2008/02/26 14:27:53 marquet Exp $
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- df.c 
+	source C/MPI de l'exemple differences finies.
+- *.tab 
+	valeur de tableau pour utilisation de l'exemple differences
+	finies.
+
+------------------------------
+Différences finies
+------------------------------------------------------------
+
+Construction de l'executable
+    % make df
+
+Utilisation : 
+  % mpirun df filein fileout
+  par exemple : 
+  % mpirun df df1.tab dfres.tab
+
+Format des fichiers de données.
+Les données sont lus depuis des fichiers .tab.
+Ces fichiers contiennent des valeurs entières et réelles dans un format
+lisible à raison d'une valeur par ligne. 
+La premiere valeur (entière) indique combien de valeurs réelles
+suivent. 
+
+Premier test. 
+Le fichier df1.tab content un tableau de valeur toutes egales a 1.
+A partir de tableau on doit avoir une convergence en une iteration et
+retrouver un resultat dont toutes les valeurs sont egales a 1. 
+  % mpirun df df1.tab dfres.tab
+  % cat dfres.tab
+  24
+  1.000000e+00
+  1.000000e+00
+  [...]
+  % diff df1.tab dfres.tab
+  %
+
+Second test.
+Le fichier dfout.tab est le resultat que doit produire la commande df
+sur le fichier dfin.tab. Le programme atteint la convergence en 10206
+iterations. 
+Comparer l'execution de votre version de df avec ce resultat : 
+  % mpirun df dfin.tab dfout2.tab
+  % diff dfout.tab dfout2.tab
+  ...
+
+Troisieme test.
+Pour des valeurs d'entree donnees, faire executer le programme par un
+nombre de processus differents. Toutes les executions doivent donner
+le meme resultat ! Exemple : 
+  % mpirun df -np 2 dfin.tab dfout2.tab
+  % mpirun df -np 4 dfin.tab dfout4.tab
+  % diff dfout2.tab dfout4.tab
+
+Travail a faire.
+Voir le fichier source df.c pour les modifications devant etre
+apportees a l'exemple.
+

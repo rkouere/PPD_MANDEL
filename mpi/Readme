@@ -1,0 +1,17 @@
+ $Id: Readme,v 1.1 2008/02/26 14:27:53 marquet Exp $ 
+------------------------------------------------------------
+
+------------------------------
+ TP Message Passing Interface
+------------------------------------------------------------
+
+- pp.*
+	source C/MPI de l'exemple ping-pong.
+- df*.*
+	source C/MPI et autres fichiers de l'exemple differences finies.
+
+voir les *.readme pour plus de détails
+
+------------------------------
+ eof
+------------------------------------------------------------
