@@ -60,8 +60,8 @@ Mesurer sur 2/4 machine et des images de taille differente.
 #define Y_MIN   -0.961
 #define Y_MAX   0.961
 
-#define X_SIZE  2048		/* dimension image */
-#define Y_SIZE  1536
+#define X_SIZE  8192		/* dimension image */
+#define Y_SIZE  6144
 #define FILENAME "mandel.ppm"	/* image resultat */
 #define TAG_LIMIT 1
 #define TAG_RESULT 2
@@ -205,23 +205,33 @@ main (int argc, char *argv[])
     MPI_Status status;		/* un status des receptions de message */
 
     /* ajout petits travaux */
-    int nombre_de_bandes_total = 30; /* nb bandes que l'on va traiter */
+    int nombre_de_bandes_total = 120; /* nb bandes que l'on va traiter */
     int nombreDeBandesTraitees = 0, i;
     int bande_en_cour_sur_proc[procs]; /* utilise pour pouvoir avoir un lien entre un processeur et la bande qu'il est en train de traiter (on ne pourrait sinon pas savoir quelle partie de l'image on doit mettre à jour lorsque le master reçoit des données d'un processeur). Commence à zero */
     double y_min_tmp, y_max_tmp;
     MPI_Request request[procs];
     int index;
+    
+    double startwtime = 0.0, endwtime;
 
-    printf("start\n");
+    /* printf("start\n"); */
+
 
     com = MPI_COMM_WORLD;
-    printf("MPI_COMM\n");
+
+
+
+    /* printf("MPI_COMM\n"); */
     MPI_Init (&argc, &argv);
-    printf("MPI_Init\n");
+
+    /* if(self == MASTER) */
+    /*   startwtime = MPI_Wtime(); */
+
+    /* printf("MPI_Init\n"); */
     MPI_Comm_size (com, &procs);
     MPI_Comm_rank (com, &self);
-    printf("procs %d\n", procs);
-    printf("self %d\n", self);
+    /* printf("procs %d\n", procs); */
+    /* printf("self %d\n", self); */
 
     parse_argv(argc, argv,
     	       &n_iter,
@@ -241,7 +251,6 @@ main (int argc, char *argv[])
       for(i = 1; i < procs; i ++) {
 	/* on calcul le y_min que l'on va envoyer en fonction du nombre de bande déjà traité */
 	y_min_tmp = y_min + pas_y*(nombre_de_bandes_total-nombreDeBandesTraitees-1);
-	printf("sending numero de bande %d...\n", nombreDeBandesTraitees);
 	/* on fait le lien numero de bande > processeur pour la reception */
 	bande_en_cour_sur_proc[i] = nombreDeBandesTraitees;
 	nombreDeBandesTraitees++;
@@ -249,7 +258,6 @@ main (int argc, char *argv[])
 	MPI_Send(&y_min_tmp, 1, MPI_DOUBLE, i, TAG_LIMIT, com);
       }
       /* notre compteur est egale au nombre de procs */
-      printf("procs = %d -- nombreDeBandesTraitees = %d\n", procs, nombreDeBandesTraitees);
       
       /* gestion de la charge */
       /* tant qu'il y a des bandes à traiter */
@@ -260,7 +268,6 @@ main (int argc, char *argv[])
 	memcpy(pictFinal.pixels+(bande_en_cour_sur_proc[status.MPI_SOURCE])*x_size*(y_size/nombre_de_bandes_total), pict.pixels, (x_size*(y_size/nombre_de_bandes_total)));
 	/* on calcul le y_min que l'on va envoyer en fonction du nombre de bande déjà traité */
 	y_min_tmp = y_min + pas_y*(nombre_de_bandes_total-nombreDeBandesTraitees-1);
-	printf("sending numero de bande %d...\n", nombreDeBandesTraitees);
 	/* on fait le lien numero de bande > processeur pour la reception */
 	bande_en_cour_sur_proc[status.MPI_SOURCE] = nombreDeBandesTraitees;
 	nombreDeBandesTraitees++;
@@ -300,10 +307,14 @@ main (int argc, char *argv[])
     sprintf(localpathName, "yo%d.ppm", self);
 
     if(self == MASTER) {
-      printf("saving picture %s\n", localpathName);
+      /* printf("saving picture %s\n", localpathName); */
       save_picture (&pictFinal, localpathName);
     }
     
+    /* if(self == MASTER) { */
+    /*   endwtime = MPI_Wtime(); */
+    /*   printf("time = %f\n", endwtime-startwtime);	        */
+    /* } */
     /* on ferme ! */
     MPI_Finalize ();
     exit(EXIT_SUCCESS);
