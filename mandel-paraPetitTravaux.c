@@ -207,7 +207,7 @@ main (int argc, char *argv[])
     /* ajout petits travaux */
     int nombre_de_bandes_total = 30; /* nb bandes que l'on va traiter */
     int nombreDeBandesTraitees = 0, i;
-    int bande_en_cour_sur_proc[procs]; /* utilise pour savoir quel nombre_de_bandes_totaleur est en train de nombre_de_bandes_totale quelle partie. Commence à zero */
+    int bande_en_cour_sur_proc[procs]; /* utilise pour pouvoir avoir un lien entre un processeur et la bande qu'il est en train de traiter (on ne pourrait sinon pas savoir quelle partie de l'image on doit mettre à jour lorsque le master reçoit des données d'un processeur). Commence à zero */
     double y_min_tmp, y_max_tmp;
     MPI_Request request[procs];
     int index;
@@ -228,61 +228,74 @@ main (int argc, char *argv[])
     	       &x_min, &x_max, &y_min, &y_max,
     	       &x_size, &y_size, &pathname);
 
-    /* memset(nombre_de_bandes_total, -1, procs); */
 
+    /* on calcul le pas de chaque bandes */
     pas_y = (y_max - y_min)/nombre_de_bandes_total;
+    /* on initialise une structure de données qui permettra de stoquer chaque bande... c'est un peut comme un fichier temporaire */
     init_picture (&pict, x_size, y_size/nombre_de_bandes_total);
     if(self == MASTER) {
+      /* initialisation de la structure de donné utilisé pour stocquer les informaitons de l'image finale */
       init_picture (&pictFinal, x_size, y_size);
+      /* phase d'initialisaiton */
       /* pour chaque processeur utilisable : on envoit le y_min necessaire au calcul et on incremente le nombre de bande traite */
       for(i = 1; i < procs; i ++) {
+	/* on calcul le y_min que l'on va envoyer en fonction du nombre de bande déjà traité */
 	y_min_tmp = y_min + pas_y*(nombre_de_bandes_total-nombreDeBandesTraitees-1);
 	printf("sending numero de bande %d...\n", nombreDeBandesTraitees);
+	/* on fait le lien numero de bande > processeur pour la reception */
 	bande_en_cour_sur_proc[i] = nombreDeBandesTraitees;
 	nombreDeBandesTraitees++;
+	/* on envoit la données à chaque processeur */
 	MPI_Send(&y_min_tmp, 1, MPI_DOUBLE, i, TAG_LIMIT, com);
       }
       /* notre compteur est egale au nombre de procs */
       printf("procs = %d -- nombreDeBandesTraitees = %d\n", procs, nombreDeBandesTraitees);
       
-      /* on envoit a tous les nombre_de_bandes_totaleurs dans un premier temps */
+      /* gestion de la charge */
+      /* tant qu'il y a des bandes à traiter */
       while(nombreDeBandesTraitees < nombre_de_bandes_total) {
-
+	/* on recupere les donnees de la bande traite par le processeur */
 	MPI_Recv(pict.pixels, x_size*(y_size/nombre_de_bandes_total), MPI_CHAR, MPI_ANY_SOURCE, TAG_RESULT, com, &status);
+	/* on copie ces données à l'endroit ou il faut dans la structure contenant les données de l'image final */
 	memcpy(pictFinal.pixels+(bande_en_cour_sur_proc[status.MPI_SOURCE])*x_size*(y_size/nombre_de_bandes_total), pict.pixels, (x_size*(y_size/nombre_de_bandes_total)));
-
+	/* on calcul le y_min que l'on va envoyer en fonction du nombre de bande déjà traité */
 	y_min_tmp = y_min + pas_y*(nombre_de_bandes_total-nombreDeBandesTraitees-1);
 	printf("sending numero de bande %d...\n", nombreDeBandesTraitees);
+	/* on fait le lien numero de bande > processeur pour la reception */
 	bande_en_cour_sur_proc[status.MPI_SOURCE] = nombreDeBandesTraitees;
 	nombreDeBandesTraitees++;
+	/* on envoit les nouvelles données au processeur libre */
 	MPI_Send(&y_min_tmp, 1, MPI_DOUBLE, status.MPI_SOURCE, TAG_LIMIT, com);
       }
-        /* il faut nombre_de_bandes_totaler les procs dernier réception */
+
+      /* il reste encore à recevoir les dernièrs calculs */
       for(i = 1; i < procs; i++) {
       	MPI_Recv(pict.pixels, x_size*(y_size/nombre_de_bandes_total), MPI_CHAR, MPI_ANY_SOURCE, TAG_RESULT, com, &status);
       	memcpy(pictFinal.pixels+(bande_en_cour_sur_proc[status.MPI_SOURCE])*x_size*(y_size/nombre_de_bandes_total), pict.pixels, (x_size*(y_size/nombre_de_bandes_total)));
       }
       y_min_tmp = -1;
+
+      /* on utilise cette technique un peut "crade" pour indiquer aux processeur qu'ils n'ont plus de travail à réaliser... il aurait ete plus propre d'utiliser un autre tag pour cela et faire un broadcast */
       for(i = 1; i < procs; i++) {
 	MPI_Send(&y_min_tmp, 1, MPI_DOUBLE, i, TAG_LIMIT, com);
       }
       
     }
 
-    
+    /* calculs des bandes */
     if(self != MASTER) {
+      /* tant qu'il y a des bandes à traiter (tant que le y_min != -1) */
       while(1) {
 	MPI_Recv(&y_min_tmp, 1, MPI_DOUBLE, MASTER, TAG_LIMIT, com, &status);
 	if(y_min_tmp == -1)
 	  break;
-
+	/* le processeur calcul sa bande et la renvoit au master */
 	compute (&pict, n_iter, x_min, x_max, y_min_tmp, y_min_tmp + pas_y); 
 	MPI_Send(pict.pixels, x_size*(y_size/nombre_de_bandes_total), MPI_CHAR, MASTER, TAG_RESULT, com);
       }
       
     }
 
-    /* MPI_Gather(pict.pixels, x_size*(y_size/nombre_de_bandes_total), MPI_CHAR, pictFinal.pixels, x_size*(y_size/nombre_de_bandes_total), MPI_CHAR, 0, com);  */
     
     sprintf(localpathName, "yo%d.ppm", self);
 
