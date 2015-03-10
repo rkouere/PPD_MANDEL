@@ -224,8 +224,8 @@ main (int argc, char *argv[])
     /* printf("MPI_COMM\n"); */
     MPI_Init (&argc, &argv);
 
-    /* if(self == MASTER) */
-    /*   startwtime = MPI_Wtime(); */
+    if(self == MASTER)
+      startwtime = MPI_Wtime();
 
     /* printf("MPI_Init\n"); */
     MPI_Comm_size (com, &procs);
@@ -311,10 +311,10 @@ main (int argc, char *argv[])
       save_picture (&pictFinal, localpathName);
     }
     
-    /* if(self == MASTER) { */
-    /*   endwtime = MPI_Wtime(); */
-    /*   printf("time = %f\n", endwtime-startwtime);	        */
-    /* } */
+    if(self == MASTER) {
+      endwtime = MPI_Wtime();
+      printf("time = %f\n", endwtime-startwtime);
+    }
     /* on ferme ! */
     MPI_Finalize ();
     exit(EXIT_SUCCESS);
